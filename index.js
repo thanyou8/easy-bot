@@ -4,60 +4,78 @@ const axios = require('axios');
 const app = express();
 app.use(express.json());
 
-// ================== CONFIG ==================
-const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+// ================= CONFIG =================
 
-// 📥 กลุ่มต้นทาง (กลุ่มที่ให้บอทอ่าน)
+// กลุ่มต้นทาง (กลุ่มที่ให้ก๊อปข้อความ)
 const SOURCE_GROUP_ID = 'ใส่_GROUP_ID_ต้นทาง';
 
-// 👤 userId ที่อนุญาต + กลุ่มปลายทาง
+// userId → กลุ่มปลายทาง (เพิ่มได้เรื่อยๆ)
 const USER_TARGET_MAP = {
-  // ตัวอย่าง
-  // 'USER_ID_1': ['GROUP_ID_B', 'GROUP_ID_C'],
-  // 'USER_ID_2': ['GROUP_ID_D']
+  // user คนที่ 1
+  'ใส่_USER_ID_คนที่1': [
+    'ใส่_GROUP_ID_ปลายทาง_1',
+    'ใส่_GROUP_ID_ปลายทาง_2'
+  ],
+
+  // user คนที่ 2
+  'ใส่_USER_ID_คนที่2': [
+    'ใส่_GROUP_ID_ปลายทาง_3'
+  ]
 };
 
-// ============================================
+const LINE_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+// ==========================================
 
 app.post('/webhook', async (req, res) => {
-  res.sendStatus(200);
+  res.sendStatus(200); // ตอบ LINE ทันที กัน timeout
 
-  const event = req.body.events?.[0];
-  if (!event) return;
+  const events = req.body.events || [];
 
-  // รับเฉพาะข้อความจากกลุ่มต้นทาง
-  if (event.source.type !== 'group') return;
-  if (event.source.groupId !== SOURCE_GROUP_ID) return;
-  if (event.type !== 'message') return;
-  if (event.message.type !== 'text') return;
-
-  const userId = event.source.userId;
-  const text = event.message.text;
-
-  // เช็คว่า user นี้อนุญาตไหม
-  const targetGroups = USER_TARGET_MAP[userId];
-  if (!targetGroups) return;
-
-  // ส่งไปทุกกลุ่มปลายทาง
-  for (const groupId of targetGroups) {
+  for (const event of events) {
     try {
-      await axios.post(
-        'https://api.line.me/v2/bot/message/push',
-        {
-          to: groupId,
-          messages: [{ type: 'text', text }]
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`
+      if (event.type !== 'message') continue;
+      if (event.message.type !== 'text') continue;
+      if (event.source.type !== 'group') continue;
+
+      const { groupId, userId } = event.source;
+      const text = event.message.text;
+
+      // ต้องมาจากกลุ่มต้นทางเท่านั้น
+      if (groupId !== SOURCE_GROUP_ID) continue;
+
+      // ต้องเป็น user ที่อนุญาต
+      const targetGroups = USER_TARGET_MAP[userId];
+      if (!targetGroups) continue;
+
+      // ส่งข้อความไปทุกกลุ่มปลายทาง
+      for (const targetGroupId of targetGroups) {
+        await axios.post(
+          'https://api.line.me/v2/bot/message/push',
+          {
+            to: targetGroupId,
+            messages: [{ type: 'text', text }]
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${LINE_TOKEN}`,
+              'Content-Type': 'application/json'
+            }
           }
-        }
-      );
+        );
+      }
+
+      console.log('Forwarded from', userId, text);
+
     } catch (err) {
-      console.error('Push error:', err.response?.data || err.message);
+      console.error('ERROR:', err.response?.data || err.message);
     }
   }
+});
+
+// health check
+app.get('/', (req, res) => {
+  res.send('LINE BOT OK');
 });
 
 const PORT = process.env.PORT || 10000;
