@@ -8,13 +8,13 @@ app.use(bodyParser.json());
 // ================== CONFIG ==================
 
 // กลุ่มต้นทาง (Group A)
-const SOURCE_GROUP_ID = 'Cxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+const SOURCE_GROUP_ID = 'Cdbd8fe14ea7c96973e191a9d4d0487dd';
 
 // ผูก userId → กลุ่มปลายทาง (เพิ่มได้เรื่อย ๆ)
 const USER_TARGET_MAP = {
   // คนที่ 1
-  'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx': [
-    'Cyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+  'Ufae980307767997b60d91ae31011e391': [
+    'C9f6c9bfd454be908e1069d49548a3f40',
     'Czzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'
   ],
 
